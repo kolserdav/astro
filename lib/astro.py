@@ -60,6 +60,8 @@ class ConjuctionsParams:
 @dataclass
 class Astro:
 
+    EPHE_PATH = './swisseph/ephe'
+
     multiThread = False
 
     EPOCH = datetime(1970, 1, 1)
@@ -97,9 +99,6 @@ class Astro:
         cls.timezone_str = timezone_str
         cls.debug = debug
 
-        swe.set_ephe_path('./swisseph/ephe')  # type: ignore
-        swe.set_sid_mode(swe.SIDM_LAHIRI)  # type: ignore
-
     @classmethod
     def convert_to_local_time(cls, utc_time, timezone_str) -> datetime:
         timezone = pytz.timezone(timezone_str)
@@ -132,6 +131,10 @@ class Astro:
     @classmethod
     def find_planet_conjunctions(cls, params: ConjuctionsParams, threadNum: Optional[int] = 1):
         cls.set_conjuction_params(params)
+
+        swe.set_ephe_path(cls.EPHE_PATH)  # type: ignore
+        swe.set_sid_mode(swe.SIDM_LAHIRI)  # type: ignore
+
         if cls.debug:
             print(
                 f"Start find_planet_conjunctions, thread: {threadNum}: {params}")
