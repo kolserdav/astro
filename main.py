@@ -9,4 +9,5 @@ astro.show_conjuctions(
     step=timedelta(minutes=1),
     accuracy=0.001,
     planet1=astro.planet.Moon,
-    planet2=astro.planet.Ketu)
+    planet2=astro.planet.Ketu
+)

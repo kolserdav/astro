@@ -1,0 +1,8 @@
+{
+	"python.activeStateToolPath": "./",
+  "editor.formatOnSave": true,
+  "python.analysis.typeCheckingMode": "basic",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.autopep8",
+  }
+}
