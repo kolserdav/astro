@@ -54,6 +54,7 @@ class ConjuctionsParams:
     planet1: str
     planet2: str
     multiThread: Optional[bool] = False
+    debug: Optional[bool] = False
 
 
 @dataclass
@@ -70,6 +71,8 @@ class Astro:
     timezone_str: str
 
     threads = Threads()
+
+    debug = True
 
     zodiac_signs_ru = [
         "Овен", "Телец", "Близнецы", "Рак",
@@ -90,8 +93,9 @@ class Astro:
     ]
 
     @classmethod
-    def __init__(cls, timezone_str: str):
+    def __init__(cls, timezone_str: str, debug: Optional[bool] = False):
         cls.timezone_str = timezone_str
+        cls.debug = debug
 
         swe.set_ephe_path('./swisseph/ephe')  # type: ignore
         swe.set_sid_mode(swe.SIDM_LAHIRI)  # type: ignore
@@ -101,6 +105,11 @@ class Astro:
         timezone = pytz.timezone(timezone_str)
         local_time = utc_time.replace(tzinfo=pytz.utc).astimezone(timezone)
         return local_time
+
+    @classmethod
+    def set_conjuction_params(cls, params: ConjuctionsParams):
+        cls.debug = params.debug
+        cls.multiThread = params.multiThread
 
     @classmethod
     def get_zodiac_sign(cls, longitude) -> Sign:
@@ -120,7 +129,11 @@ class Astro:
         )
 
     @classmethod
-    def find_planets_conjunction(cls, params: ConjuctionsParams):
+    def find_planet_conjunctions(cls, params: ConjuctionsParams, threadNum: Optional[int] = 1):
+        cls.set_conjuction_params(params)
+        if cls.debug:
+            print(
+                f"Start find_planet_conjunctions, thread: {threadNum}: {params}")
         current_time = params.start
 
         result: List[Conjuctions] = []
@@ -162,6 +175,9 @@ class Astro:
 
             current_time += params.step
 
+        if cls.debug:
+            print(
+                f"End find_planet_conjunctions, thread: {threadNum}: {params}")
         if cls.multiThread:
             cls.threads.queue.put(cls.threads.EOF)
 
@@ -192,7 +208,8 @@ class Astro:
 
     @classmethod
     def show_conjuctions(cls, params: ConjuctionsParams):
-        cls.multiThread = params.multiThread
+        cls.set_conjuction_params(params)
+
         start = datetime.now()
 
         conjunctions: List[Conjuctions] = []
@@ -203,21 +220,22 @@ class Astro:
 
             threadFuncs: List[ThreadFunc] = []
 
-            for chunk in chunks:
+            for index, chunk in enumerate(chunks):
                 threadFuncs.append(ThreadFunc(
-                    func=cls.find_planets_conjunction, args=[ConjuctionsParams(
+                    func=cls.find_planet_conjunctions, args=[ConjuctionsParams(
                         start=chunk.start,
                         end=chunk.end,
                         accuracy=params.accuracy,
                         step=params.step,
                         planet1=params.planet1,
                         planet2=params.planet2,
+                        debug=params.debug,
                         multiThread=True
-                    )]))
+                    ), index + 1]))
             conjunctions: List[Conjuctions] = cls.threads.run_in_threads(
                 threadFuncs)
         else:
-            conjunctions = cls.find_planets_conjunction(ConjuctionsParams(
+            conjunctions = cls.find_planet_conjunctions(ConjuctionsParams(
                 start=params.start,
                 end=params.end,
                 accuracy=params.accuracy,
