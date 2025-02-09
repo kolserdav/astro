@@ -53,6 +53,7 @@ class ConjuctionsParams:
     planet1: str
     planet2: str
     multiThread: Optional[bool] = False
+    maxThreads: Optional[int] = None
     debug: Optional[bool] = False
 
 
@@ -70,6 +71,8 @@ class Astro:
     timezone_str: str
 
     debug = True
+
+    max_threads: Optional[int] = None
 
     zodiac_signs_ru = [
         "Овен", "Телец", "Близнецы", "Рак",
@@ -107,6 +110,7 @@ class Astro:
     def set_conjuction_params(cls, params: ConjuctionsParams):
         cls.debug = params.debug
         cls.multiThread = params.multiThread
+        cls.max_threads = params.maxThreads
 
     @classmethod
     def get_zodiac_sign(cls, longitude) -> Sign:
@@ -179,6 +183,8 @@ class Astro:
     @classmethod
     def split_dates(cls, start: datetime, end: datetime, step: timedelta):
         cpus = cls.CPUS if cls.CPUS != None else 4
+        cpus = cls.max_threads if cls.max_threads != None and cpus > cls.max_threads else cpus
+
         total_seconds_start = (start - cls.EPOCH).total_seconds()
         total_seconds_end = (end - cls.EPOCH).total_seconds()
         total_seconds_step = (step).total_seconds()
