@@ -1,8 +1,11 @@
-from typing import List
+from typing import List, Optional
 import swisseph as swe
 from datetime import datetime, timedelta
 import pytz
+from queue import Queue
 from dataclasses import dataclass
+from lib.threads import Threads, ThreadFunc
+import os
 
 
 @dataclass
@@ -37,10 +40,36 @@ class Sign:
 
 
 @dataclass
+class TimeRange:
+    start: datetime
+    end: datetime
+
+
+@dataclass
+class ConjuctionsParams:
+    start: datetime
+    end: datetime
+    step: timedelta
+    accuracy: float
+    planet1: str
+    planet2: str
+    multiThread: Optional[bool] = False
+
+
+@dataclass
 class Astro:
+
+    multiThread = False
+
+    EPOCH = datetime(1970, 1, 1)
+
+    CPUS = os.cpu_count()
+
     planet = Planet()
 
     timezone_str: str
+
+    threads = Threads()
 
     zodiac_signs_ru = [
         "Овен", "Телец", "Близнецы", "Рак",
@@ -64,8 +93,8 @@ class Astro:
     def __init__(cls, timezone_str: str):
         cls.timezone_str = timezone_str
 
-        swe.set_ephe_path('./swisseph/ephe')
-        swe.set_sid_mode(swe.SIDM_LAHIRI)
+        swe.set_ephe_path('./swisseph/ephe')  # type: ignore
+        swe.set_sid_mode(swe.SIDM_LAHIRI)  # type: ignore
 
     @classmethod
     def convert_to_local_time(cls, utc_time, timezone_str) -> datetime:
@@ -91,52 +120,124 @@ class Astro:
         )
 
     @classmethod
-    def find_planets_conjunction(cls, start: datetime, end: datetime, step: timedelta, accuracy: float, planet1: str, planet2: str):
-        current_time = start
+    def find_planets_conjunction(cls, params: ConjuctionsParams):
+        current_time = params.start
+
+        result: List[Conjuctions] = []
+
+        while current_time < params.end:
+            jd = swe.utc_to_jd(  # type: ignore
+                current_time.year,
+                current_time.month,
+                current_time.day,
+                current_time.hour,
+                current_time.minute,
+                current_time.second,
+                swe.GREG_CAL)[1]  # type: ignore
+            planet1_value = getattr(
+                swe, params.planet1) if params.planet1 != cls.planet.Ketu else getattr(swe, cls.planet.Rahu)
+            planet2_value = getattr(
+                swe, params.planet2) if params.planet2 != cls.planet.Ketu else getattr(swe, cls.planet.Rahu)
+            planet1_data = swe.calc(jd, planet1_value)  # type: ignore
+            planet2_data = swe.calc(jd, planet2_value)  # type: ignore
+
+            shift1 = 0 if params.planet1 != cls.planet.Ketu else 180
+            shift2 = 0 if params.planet2 != cls.planet.Ketu else 180
+
+            ayanamsa = swe.get_ayanamsa(jd)  # type: ignore
+
+            planet1_longitude = swe.degnorm(  # type: ignore
+                planet1_data[0][0] + shift1 - ayanamsa)
+            planet2_longitude = swe.degnorm(  # type: ignore
+                planet2_data[0][0] + shift2 - ayanamsa)
+
+            if abs(planet1_longitude - planet2_longitude) < params.accuracy:
+                local_time = cls.convert_to_local_time(
+                    current_time, cls.timezone_str)
+                conjuction = Conjuctions(planet1=Conjuction(
+                    time=local_time, longitude=planet1_longitude), planet2=Conjuction(time=local_time, longitude=planet2_longitude))
+                result.append(conjuction)
+                if cls.multiThread:
+                    cls.threads.queue.put(conjuction)
+
+            current_time += params.step
+
+        if cls.multiThread:
+            cls.threads.queue.put(cls.threads.EOF)
+
+        return result
+
+    @classmethod
+    def split_dates(cls, start: datetime, end: datetime, step: timedelta):
+        cpus = cls.CPUS if cls.CPUS != None else 4
+        total_seconds_start = (start - cls.EPOCH).total_seconds()
+        total_seconds_end = (end - cls.EPOCH).total_seconds()
+        total_seconds_step = (step).total_seconds()
+        number_of_timedeltas = int((
+            total_seconds_end - total_seconds_start) // total_seconds_step)
+        chunk_length = max(1, number_of_timedeltas //
+                           cpus) * total_seconds_step
+
+        res: List[TimeRange] = []
+        for i in range(cpus):
+            current_start = start + timedelta(seconds=i * chunk_length)
+            current_end = current_start + timedelta(seconds=chunk_length)
+
+            if current_end > end:
+                current_end = end
+
+            res.append(TimeRange(start=current_start, end=current_end))
+
+        return res
+
+    @classmethod
+    def show_conjuctions(cls, params: ConjuctionsParams):
+        cls.multiThread = params.multiThread
+        start = datetime.now()
 
         conjunctions: List[Conjuctions] = []
 
-        while current_time < end:
-            jd = swe.utc_to_jd(current_time.year, current_time.month, current_time.day,
-                               current_time.hour, current_time.minute, current_time.second, swe.GREG_CAL)[1]
-            planet1_value = getattr(
-                swe, planet1) if planet1 != cls.planet.Ketu else getattr(swe, cls.planet.Rahu)
-            planet2_value = getattr(
-                swe, planet2) if planet2 != cls.planet.Ketu else getattr(swe, cls.planet.Rahu)
-            planet1_data = swe.calc(jd, planet1_value)
-            planet2_data = swe.calc(jd, planet2_value)
+        if params.multiThread:
+            chunks = cls.split_dates(
+                start=params.start, end=params.end, step=params.step)
 
-            shift1 = 0 if planet1 != cls.planet.Ketu else 180
-            shift2 = 0 if planet2 != cls.planet.Ketu else 180
+            threadFuncs: List[ThreadFunc] = []
 
-            ayanamsa = swe.get_ayanamsa(jd)
+            for chunk in chunks:
+                threadFuncs.append(ThreadFunc(
+                    func=cls.find_planets_conjunction, args=[ConjuctionsParams(
+                        start=chunk.start,
+                        end=chunk.end,
+                        accuracy=params.accuracy,
+                        step=params.step,
+                        planet1=params.planet1,
+                        planet2=params.planet2,
+                        multiThread=True
+                    )]))
+            conjunctions: List[Conjuctions] = cls.threads.run_in_threads(
+                threadFuncs)
+        else:
+            conjunctions = cls.find_planets_conjunction(ConjuctionsParams(
+                start=params.start,
+                end=params.end,
+                accuracy=params.accuracy,
+                step=params.step,
+                planet1=params.planet1,
+                planet2=params.planet2,
+                multiThread=False
+            ))
 
-            planet1_longitude = swe.degnorm(
-                planet1_data[0][0] + shift1 - ayanamsa)
-            planet2_longitude = swe.degnorm(
-                planet2_data[0][0] + shift2 - ayanamsa)
-
-            if abs(planet1_longitude - planet2_longitude) < accuracy:
-                local_time = cls.convert_to_local_time(
-                    current_time, cls.timezone_str)
-                conjunctions.append(Conjuctions(planet1=Conjuction(
-                    time=local_time, longitude=planet1_longitude), planet2=Conjuction(time=local_time, longitude=planet2_longitude)))
-
-            current_time += step
-
-        return conjunctions
-
-    @classmethod
-    def show_conjuctions(cls, start: datetime, end: datetime, step: timedelta, accuracy: float, planet1: str, planet2: str):
-        conjunctions = cls.find_planets_conjunction(
-            start=start, end=end, step=step, accuracy=accuracy, planet1=planet1, planet2=planet2)
+        print(
+            f"End for: {datetime.now() - start}, multiThread:{params.multiThread}")
         if conjunctions:
             print(
-                f"Moments, when {planet1} and {planet2} are in one degree, from: {start}, to: {end}, for: {step}, with accuracy: {accuracy}:")
+                f"Moments, when {params.planet1} and {params.planet2} are in one degree, from: {params.start}, to: {params.end}, \
+for: {params.step}, with accuracy: {params.accuracy}:")
             for moment in conjunctions:
                 time = moment.planet1.time.strftime("%Y-%m-%d %H:%M:%S")
                 data1: Sign = cls.get_zodiac_sign(moment.planet1.longitude)
                 data2: Sign = cls.get_zodiac_sign(moment.planet2.longitude)
-                print(f"Time: {time}, Sign: {data1.name_ru}|{data1.name_en}|{data1.name_sa}, {planet1}: {data1.degrees}:{data1.minutes}:{data1.seconds}, {planet2}: {data2.degrees}:{data2.minutes}:{data2.seconds}")
+                print(f"Time: {time}, Sign: {data1.name_ru}|{data1.name_en}|{data1.name_sa}, {params.planet1}: {data1.degrees}\
+:{data1.minutes}:{data1.seconds}, {params.planet2}: {data2.degrees}:{data2.minutes}:{data2.seconds}")
         else:
             print("There are no matches for these params")
