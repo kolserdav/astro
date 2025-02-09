@@ -1,10 +1,9 @@
 from typing import List, Optional
+from concurrent.futures import ProcessPoolExecutor
 import swisseph as swe
 from datetime import datetime, timedelta
 import pytz
-from queue import Queue
 from dataclasses import dataclass
-from lib.threads import Threads, ThreadFunc
 import os
 
 
@@ -69,8 +68,6 @@ class Astro:
     planet = Planet()
 
     timezone_str: str
-
-    threads = Threads()
 
     debug = True
 
@@ -170,16 +167,12 @@ class Astro:
                 conjuction = Conjuctions(planet1=Conjuction(
                     time=local_time, longitude=planet1_longitude), planet2=Conjuction(time=local_time, longitude=planet2_longitude))
                 result.append(conjuction)
-                if cls.multiThread:
-                    cls.threads.queue.put(conjuction)
 
             current_time += params.step
 
         if cls.debug:
             print(
                 f"End find_planet_conjunctions, thread: {threadNum}: {params}")
-        if cls.multiThread:
-            cls.threads.queue.put(cls.threads.EOF)
 
         return result
 
@@ -218,22 +211,24 @@ class Astro:
             chunks = cls.split_dates(
                 start=params.start, end=params.end, step=params.step)
 
-            threadFuncs: List[ThreadFunc] = []
+            with ProcessPoolExecutor() as executor:
+                results = list(executor.map(
+                    cls.find_planet_conjunctions,
+                    [
+                        ConjuctionsParams(
+                            start=chunk.start,
+                            end=chunk.end,
+                            accuracy=params.accuracy,
+                            step=params.step,
+                            planet1=params.planet1,
+                            planet2=params.planet2,
+                            debug=params.debug,
+                        ) for chunk in chunks
+                    ]
+                ))
 
-            for index, chunk in enumerate(chunks):
-                threadFuncs.append(ThreadFunc(
-                    func=cls.find_planet_conjunctions, args=[ConjuctionsParams(
-                        start=chunk.start,
-                        end=chunk.end,
-                        accuracy=params.accuracy,
-                        step=params.step,
-                        planet1=params.planet1,
-                        planet2=params.planet2,
-                        debug=params.debug,
-                        multiThread=True
-                    ), index + 1]))
-            conjunctions: List[Conjuctions] = cls.threads.run_in_threads(
-                threadFuncs)
+                conjunctions = [
+                    item for sublist in results for item in sublist]
         else:
             conjunctions = cls.find_planet_conjunctions(ConjuctionsParams(
                 start=params.start,
@@ -242,7 +237,7 @@ class Astro:
                 step=params.step,
                 planet1=params.planet1,
                 planet2=params.planet2,
-                multiThread=False
+                debug=params.debug,
             ))
 
         print(
