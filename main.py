@@ -12,6 +12,7 @@ astro.show_conjuctions(
         planet1=astro.planet.Moon,
         planet2=astro.planet.Ketu,
         multiThread=True,
-        debug=False
+        debug=False,
+        maxThreads=None
     )
 )
