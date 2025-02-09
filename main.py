@@ -11,7 +11,7 @@ astro.show_conjuctions(
         accuracy=0.001,
         planet1=astro.planet.Moon,
         planet2=astro.planet.Ketu,
-        multiThread=True,
+        multiThread=False,
         debug=True
     )
 )
