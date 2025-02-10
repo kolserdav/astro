@@ -8,7 +8,6 @@ def main():
     cli.argparse()     
     if cli.command == cli.COMMAND_CONJUCTION: 
         astro = Astro(timezone_str=cli.TIME_ZONE_STR_DEFAULT)
-        print(f"{cli.args}")
         astro.show_conjuctions(
             ConjuctionsParams(
                 start=cli.start if cli.start != None else cli.START_DEFAULT,
