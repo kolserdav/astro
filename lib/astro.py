@@ -5,10 +5,11 @@ from datetime import datetime, timedelta
 import pytz
 from dataclasses import dataclass
 import os
+from lib.handler import Handler
 
 
 @dataclass
-class Planet():
+class Planet(Handler):
     Sun = 'SUN'
     Moon = 'MOON'
     Mercury = 'MERCURY'
@@ -58,7 +59,7 @@ class ConjuctionsParams:
 
 
 @dataclass
-class Astro:
+class Astro(Handler):
 
     EPHE_PATH = './swisseph/ephe'
 
@@ -70,7 +71,7 @@ class Astro:
 
     planet = Planet()
 
-    timezone_str: str
+    timezone_str: str = Handler.TIME_ZONE_STR_DEFAULT
 
     debug = True
 
@@ -256,7 +257,7 @@ class Astro:
                 f"Moments, when {params.planet1} and {params.planet2} are in one degree, from: {params.start}, to: {params.end}, \
 for: {params.step}, with accuracy: {params.accuracy}:")
             for moment in conjunctions:
-                time = moment.planet1.time.strftime("%Y-%m-%d %H:%M:%S")
+                time = moment.planet1.time.strftime(cls.TIME_FORMAT)
                 data1: Sign = cls.get_zodiac_sign(moment.planet1.longitude)
                 data2: Sign = cls.get_zodiac_sign(moment.planet2.longitude)
                 print(f"Time: {time}, Sign: {data1.name_ru}|{data1.name_en}|{data1.name_sa}, {params.planet1}: {data1.degrees}\
