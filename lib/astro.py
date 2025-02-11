@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 from concurrent.futures import ProcessPoolExecutor
 import swisseph as swe
 from datetime import datetime, timedelta
@@ -123,11 +123,35 @@ class Astro(Handler):
             seconds=round(seconds, 1)
         )
 
+    def __set_global_params(self):
+        swe.set_ephe_path(self.EPHE_PATH)  # type: ignore
+        swe.set_sid_mode(swe.SIDM_LAHIRI)  # type: ignore
+
+    def __get_jd(self, current_time: datetime):
+        return swe.utc_to_jd(  # type: ignore
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+            swe.GREG_CAL)[1]  # type: ignore
+
+    def __get_planet_value(self, planet: str):
+            return getattr(
+                swe, planet) if planet != self.planet.Ketu else getattr(swe, self.planet.Rahu)
+
+    def __get_planet_longitude(self, planet: str, jd: Any, ayanamsa: Any) -> float:
+            planet_value = self.__get_planet_value(planet)
+            planet_data = swe.calc(jd, planet_value)  # type: ignore
+            shift = 0 if planet != self.planet.Ketu else 180
+            return swe.degnorm(  # type: ignore
+                planet_data[0][0] + shift - ayanamsa)
+
     def find_planet_conjunctions(self, params: ConjuctionsParams, threadNum: Optional[int] = 1):
         self.set_conjuction_params(params)
 
-        swe.set_ephe_path(self.EPHE_PATH)  # type: ignore
-        swe.set_sid_mode(swe.SIDM_LAHIRI)  # type: ignore
+        self.__set_global_params()
 
         if self.debug:
             print(
@@ -137,30 +161,10 @@ class Astro(Handler):
         result: List[Conjuctions] = []
 
         while current_time < params.end:
-            jd = swe.utc_to_jd(  # type: ignore
-                current_time.year,
-                current_time.month,
-                current_time.day,
-                current_time.hour,
-                current_time.minute,
-                current_time.second,
-                swe.GREG_CAL)[1]  # type: ignore
-            planet1_value = getattr(
-                swe, params.planet1) if params.planet1 != self.planet.Ketu else getattr(swe, self.planet.Rahu)
-            planet2_value = getattr(
-                swe, params.planet2) if params.planet2 != self.planet.Ketu else getattr(swe, self.planet.Rahu)
-            planet1_data = swe.calc(jd, planet1_value)  # type: ignore
-            planet2_data = swe.calc(jd, planet2_value)  # type: ignore
-
-            shift1 = 0 if params.planet1 != self.planet.Ketu else 180
-            shift2 = 0 if params.planet2 != self.planet.Ketu else 180
-
+            jd = self.__get_jd(current_time=current_time)     
             ayanamsa = swe.get_ayanamsa(jd)  # type: ignore
-
-            planet1_longitude = swe.degnorm(  # type: ignore
-                planet1_data[0][0] + shift1 - ayanamsa)
-            planet2_longitude = swe.degnorm(  # type: ignore
-                planet2_data[0][0] + shift2 - ayanamsa)
+            planet1_longitude = self.__get_planet_longitude(planet=params.planet1, jd=jd, ayanamsa=ayanamsa)
+            planet2_longitude = self.__get_planet_longitude(planet=params.planet2, jd=jd, ayanamsa=ayanamsa)
 
             if abs(planet1_longitude - planet2_longitude) < params.accuracy:
                 local_time = self.convert_to_local_time(

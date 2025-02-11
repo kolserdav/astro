@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, _SubParsersAction
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional
@@ -20,9 +20,13 @@ class ArgsParsed:
 
 @dataclass
 class Cli(Handler):
+    _subparsers: Optional[Any] = None  
+
     PERFORMANCE_MESS = 'PERFORMANCE'
 
     COMMAND_CONJUCTION = 'conjuction'
+
+    COMMAND_TRANSIT = 'transit'
 
     command = ''
     start: Optional[datetime] = None
@@ -41,17 +45,49 @@ class Cli(Handler):
 
     def argparse(self):
         parser = ArgumentParser(description='Astro compute utility')
-        subparsers = parser.add_subparsers(title='Commands', dest='command')
+        self._subparsers = parser.add_subparsers(title='Commands', dest='command')
 
-        subparser = subparsers.add_parser(
-            name=self.COMMAND_CONJUCTION, description='Get planet conjuctions')
+        self.__set_conjuction_args()
+        self.__set_transit_args()
+        
+        args: Any = parser.parse_args()
+        self.args = args
+        self.command = args.command
 
-        time_format = str(self.TIME_FORMAT).replace('%', '')
+        self._cast_args(args)
+        
+        if (self.command == None):
+            print(f"Command is not passed, try add -h|-help parameter")
 
+    def __get_clean_time_format(self):
+        return str(self.TIME_FORMAT).replace('%', '')
+
+    def __set_transit_args(self):
+        if (self._subparsers == None):
+            print(f"Subparser is None in _set_transit_args")
+            return
+
+        subparser = self._subparsers.add_parser(
+            name=self.COMMAND_TRANSIT, description='Get planet conjuctions')
+        time_format = self.__get_clean_time_format()    
         subparser.add_argument(
             '--start', type=str, help=f"Start date: str '{time_format}' [{self.START_DEFAULT}]", required=False)
         subparser.add_argument(
             '-e', '--end', type=str, help=f"End date: str '{time_format}' [{self.END_DEFAULT}]", required=False)
+    
+    def __set_conjuction_args(self):
+        if (self._subparsers == None):
+            print(f"Subparser is None in _set_conjuction_args")
+            return
+        subparser = self._subparsers.add_parser(
+            name=self.COMMAND_CONJUCTION, description='Get planet conjuctions')
+        
+        time_format = self.__get_clean_time_format()
+        subparser.add_argument(
+            '--start', type=str, help=f"Start date: str '{time_format}' [{self.START_DEFAULT}]", required=False)
+        subparser.add_argument(
+            '-e', '--end', type=str, help=f"End date: str '{time_format}' [{self.END_DEFAULT}]", required=False)
+
         subparser.add_argument(
             '-s', '--step', type=int, help=f"Step in minutes: int [{self.STEP_MINUTES_DEFAULT}]", required=False)
         subparser.add_argument('-a', '--accuracy', type=float,
@@ -64,16 +100,7 @@ class Cli(Handler):
                                help=f"Planet 1: str [SUN]", required=False)
         subparser.add_argument('-p2', '--planet2', type=str,
                                help=f"Planet 2: str [MOON]", required=False)
-        args: Any = parser.parse_args()
-        self.args = args
-        self.command = args.command
-
-        if (self.command == self.COMMAND_CONJUCTION):
-            self._cast_args(args)
-        elif (self.command == None):
-            print(f"Command is not passed, try add -h|-help parameter")
-            exit(1)
-
+    
     def _cast_args(self, args: ArgsParsed):
         if args.start != None:
             try:
