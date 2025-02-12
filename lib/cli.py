@@ -6,21 +6,33 @@ from lib.handler import Handler
 
 
 @dataclass
-class ArgsParsed:
-    command: Optional[str]
+class ArgsCommon:
     start: Optional[str]
     end: Optional[str]
+    threads_max:  Optional[int]
+    no_threads: Optional[bool]
+
+
+@dataclass
+class ArgsConjuctionParsed(ArgsCommon):
+    command: Optional[str]
     step: Optional[int]
     accuracy: Optional[float]
-    no_threads: Optional[bool]
-    threads_max:  Optional[int]
     planet1: Optional[str]
     planet2: Optional[str]
 
 
 @dataclass
+class ArgsTransitParsed(ArgsCommon):
+    command: Optional[str]
+    step: Optional[int]
+    planet: Optional[str]
+    sign: Optional[str]
+
+
+@dataclass
 class Cli(Handler):
-    _subparsers: Optional[Any] = None  
+    _subparsers: Optional[Any] = None
 
     PERFORMANCE_MESS = 'PERFORMANCE'
 
@@ -31,7 +43,7 @@ class Cli(Handler):
     command = ''
     start: Optional[datetime] = None
     end: Optional[datetime] = None
-    args = ArgsParsed(
+    args_conjuction = ArgsConjuctionParsed(
         command=None,
         start=None,
         end=None,
@@ -42,22 +54,41 @@ class Cli(Handler):
         planet1=None,
         planet2=None
     )
+    args_transit = ArgsTransitParsed(
+        command=None,
+        start=None,
+        end=None,
+        step=None,
+        no_threads=None,
+        threads_max=None,
+        planet=None,
+        sign=None
+    )
 
     def argparse(self):
         parser = ArgumentParser(description='Astro compute utility')
-        self._subparsers = parser.add_subparsers(title='Commands', dest='command')
+        self._subparsers = parser.add_subparsers(
+            title='Commands', dest='command')
 
-        self.__set_conjuction_args()
-        self.__set_transit_args()
-        
+        subparser = self.__set_conjuction_args()
+        self.set_common_args(subparser=subparser)
+
+        subparser = self.__set_transit_args()
+        self.set_common_args(subparser=subparser)
+
         args: Any = parser.parse_args()
-        self.args = args
+
         self.command = args.command
 
-        self._cast_args(args)
-        
         if (self.command == None):
             print(f"Command is not passed, try add -h|-help parameter")
+        else:
+            self._cast_args(args)
+
+        if (self.command == self.COMMAND_CONJUCTION):
+            self.args_conjuction = args
+        elif (self.command == self.COMMAND_TRANSIT):
+            self.args_transit = args
 
     def __get_clean_time_format(self):
         return str(self.TIME_FORMAT).replace('%', '')
@@ -68,40 +99,44 @@ class Cli(Handler):
             return
 
         subparser = self._subparsers.add_parser(
-            name=self.COMMAND_TRANSIT, description='Get planet conjuctions')
-        time_format = self.__get_clean_time_format()    
+            name=self.COMMAND_TRANSIT, description='Get planet transit')
+
         subparser.add_argument(
-            '--start', type=str, help=f"Start date: str '{time_format}' [{self.START_DEFAULT}]", required=False)
-        subparser.add_argument(
-            '-e', '--end', type=str, help=f"End date: str '{time_format}' [{self.END_DEFAULT}]", required=False)
-    
+            '--sign', type=str, help=f"Target sign: str [{self.zodiac_signs_en[0]}]", required=False)
+        subparser.add_argument('-p', '--planet', type=str,
+                               help=f"Planet: str [SUN]", required=False)
+
+        return subparser
+
     def __set_conjuction_args(self):
         if (self._subparsers == None):
             print(f"Subparser is None in _set_conjuction_args")
             return
         subparser = self._subparsers.add_parser(
             name=self.COMMAND_CONJUCTION, description='Get planet conjuctions')
-        
+
+        subparser.add_argument('-a', '--accuracy', type=float,
+                               help=f"Degrees conjuction accuracy: float [{self.ACCURACY_DEFAULT}]", required=False)
+        subparser.add_argument('-p1', '--planet1', type=str,
+                               help=f"Planet 1: str [SUN]", required=False)
+        subparser.add_argument('-p2', '--planet2', type=str,
+                               help=f"Planet 2: str [MOON]", required=False)
+        return subparser
+
+    def set_common_args(self, subparser: Any):
         time_format = self.__get_clean_time_format()
         subparser.add_argument(
             '--start', type=str, help=f"Start date: str '{time_format}' [{self.START_DEFAULT}]", required=False)
         subparser.add_argument(
             '-e', '--end', type=str, help=f"End date: str '{time_format}' [{self.END_DEFAULT}]", required=False)
-
-        subparser.add_argument(
-            '-s', '--step', type=int, help=f"Step in minutes: int [{self.STEP_MINUTES_DEFAULT}]", required=False)
-        subparser.add_argument('-a', '--accuracy', type=float,
-                               help=f"Degrees conjuction accuracy: float [{self.ACCURACY_DEFAULT}]", required=False)
         subparser.add_argument('--no-threads', action='store_true',
                                help=f"Without multithreading ({self.PERFORMANCE_MESS}): bool [{self.WITH_TREADS_DEFAULT == False}]", required=False)
         subparser.add_argument(
             '--threads-max', type=int, help=f"Threads max ({self.PERFORMANCE_MESS}): int [{self.THREAD_MAX_DEFAULT}]", required=False)
-        subparser.add_argument('-p1', '--planet1', type=str,
-                               help=f"Planet 1: str [SUN]", required=False)
-        subparser.add_argument('-p2', '--planet2', type=str,
-                               help=f"Planet 2: str [MOON]", required=False)
-    
-    def _cast_args(self, args: ArgsParsed):
+        subparser.add_argument(
+            '-s', '--step', type=int, help=f"Step in minutes: int [{self.STEP_MINUTES_DEFAULT}]", required=False)
+
+    def _cast_args(self, args: ArgsCommon):
         if args.start != None:
             try:
                 self.start = datetime.strptime(args.start, self.TIME_FORMAT)
