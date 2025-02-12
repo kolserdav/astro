@@ -1,6 +1,6 @@
 from lib.astro import Astro, ConjuctionsParams, TransitParams
 from lib.cli import Cli
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 
 def main():
@@ -27,7 +27,6 @@ def main():
             )
         )
     elif cli.command == cli.COMMAND_TRANSIT:
-        print(f"{cli.args_transit}")
         astro.show_transits(
             TransitParams(
                 start=cli.start if cli.start != None else cli.START_DEFAULT,

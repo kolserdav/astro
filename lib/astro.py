@@ -205,7 +205,9 @@ class Astro(Handler):
 
             sign = self.get_zodiac_sign(planet_longitude)
 
-            if params.sign_index == sign.sign_index and current_sign != sign.name_en:
+            if params.sign_index != sign.sign_index:
+                current_sign = ''
+            elif params.sign_index == sign.sign_index and current_sign != sign.name_en and sign.degrees == 0:
                 current_sign = sign.name_en
                 local_time = self.convert_to_local_time(
                     current_time, self.timezone_str)
@@ -255,7 +257,7 @@ class Astro(Handler):
         sign_index = self.find_zodiac_index(params.sign)
         if (sign_index == None):
             print(
-                f"Sign is missing: {params.sign}, alloved signs_en:{"|".join(self.zodiac_signs_en)} \n or signs_ru:{"|".join(self.zodiac_signs_ru)}")
+                f"Sign is missing: {params.sign}, alloved signs_en:{'|'.join(self.zodiac_signs_en)} \n or signs_ru:{'|'.join(self.zodiac_signs_ru)}")
             exit(1)
 
         if params.multiThread:
