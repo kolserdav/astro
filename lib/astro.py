@@ -247,8 +247,9 @@ class Astro(Handler):
         return res
 
     def show_transits(self, params: TransitParams):
-        print(f"Starting, timezone: {self.timezone_str}, debug: {self.debug}")
         self.set_params(params)
+        
+        print(f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThreading: {self.multiThread}")
 
         start = datetime.now()
 
@@ -296,7 +297,7 @@ class Astro(Handler):
             ))
 
         print(
-            f"End for: {datetime.now() - start}, multiThread:{params.multiThread}")
+            f"End for: {datetime.now() - start}")
         if transits:
             print(
                 f"Moments, when {params.planet} move to sign {params.sign}, from: {params.start}, to: {params.end}, \
@@ -308,7 +309,7 @@ for: {params.step}")
             print(f"There are no matches for these params: {params}")
 
     def show_conjuctions(self, params: ConjuctionsParams):
-        print(f"Starting, timezone: {self.timezone_str}, debug: {self.debug}")
+        print(f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThread:{params.multiThread}")
         self.set_params(params)
 
         start = datetime.now()
@@ -351,7 +352,7 @@ for: {params.step}")
             ))
 
         print(
-            f"End for: {datetime.now() - start}, multiThread:{params.multiThread}")
+            f"End for: {datetime.now() - start}")
         if conjunctions:
             print(
                 f"Moments, when {params.planet1} and {params.planet2} are in one degree, from: {params.start}, to: {params.end}, \

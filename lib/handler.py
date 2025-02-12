@@ -1,6 +1,6 @@
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 
@@ -29,8 +29,8 @@ class Handler:
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     STEP_MINUTES_DEFAULT = 1
     ACCURACY_DEFAULT = 0.001
-    START_DEFAULT = datetime(2025, 1, 1)
-    END_DEFAULT = datetime(2026, 1, 1)
+    START_DEFAULT = datetime.now()
+    END_DEFAULT = datetime.now() + timedelta(days=365)
     THREAD_MAX_DEFAULT: Optional[int] = None
     WITH_TREADS_DEFAULT = True
     DEBUG_DEFAULT = False
