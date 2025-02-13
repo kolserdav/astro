@@ -310,7 +310,7 @@ class Astro(Handler):
                 f"Moments, when {params.planet} move to sign {params.sign}, from: {params.start}, to: {params.end}, \
 for: {params.step}")
             for transit in transits:
-                print(f"Time: {transit.moment.time}, Sign: {transit.sign.name_ru}|{transit.sign.name_en}|{transit.sign.name_sa}, {params.planet}: {transit.sign.degrees}\
+                print(f"Time: {transit.moment.time}, Sign: {transit.sign.name_ru}|{transit.sign.name_en}|{transit.sign.name_sa}|{transit.sign.sign_index}, {params.planet}: {transit.sign.degrees}\
 :{transit.sign.minutes}:{transit.sign.seconds}")
         else:
             print(f"There are no matches for these params: {params}")
@@ -369,7 +369,7 @@ for: {params.step}, with accuracy: {params.accuracy}:")
                 time = moment.planet1.time.strftime(self.TIME_FORMAT)
                 data1: Sign = self.get_zodiac_sign(moment.planet1.longitude)
                 data2: Sign = self.get_zodiac_sign(moment.planet2.longitude)
-                print(f"Time: {time}, Sign: {data1.name_ru}|{data1.name_en}|{data1.name_sa}, {params.planet1}: {data1.degrees}\
+                print(f"Time: {time}, Sign: {data1.name_ru}|{data1.name_en}|{data1.name_sa}|{data1.sign_index}, {params.planet1}: {data1.degrees}\
 :{data1.minutes}:{data1.seconds}, {params.planet2}: {data2.degrees}:{data2.minutes}:{data2.seconds}")
         else:
             print(f"There are no matches for these params: {params}")
