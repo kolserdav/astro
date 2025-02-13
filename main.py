@@ -37,7 +37,8 @@ def main():
                 multiThread=False if cli.args_transit.no_threads == True else cli.WITH_TREADS_DEFAULT,
                 maxThreads=cli.args_transit.threads_max if cli.args_transit.threads_max else cli.THREAD_MAX_DEFAULT,
                 sign=cli.args_transit.sign if cli.args_transit.sign != None else cli.SIGN_DEFAULT,
-                sign_index=0
+                sign_index=0,
+                all=cli.args_transit.all if cli.args_transit.all != None else cli.ALL_SIGNS_DEFAULT
             )
         )
 

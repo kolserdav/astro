@@ -28,6 +28,7 @@ class ArgsTransitParsed(ArgsCommon):
     step: Optional[int]
     planet: Optional[str]
     sign: Optional[str]
+    all: Optional[bool]
 
 
 @dataclass
@@ -35,6 +36,8 @@ class Cli(Handler):
     _subparsers: Optional[Any] = None
 
     PERFORMANCE_MESS = 'PERFORMANCE'
+
+    ACCURACY_MESS = 'ACCURACY'
 
     COMMAND_CONJUCTION = 'conjuction'
 
@@ -62,7 +65,8 @@ class Cli(Handler):
         no_threads=None,
         threads_max=None,
         planet=None,
-        sign=None
+        sign=None,
+        all=None
     )
 
     def argparse(self):
@@ -105,6 +109,8 @@ class Cli(Handler):
             '--sign', type=str, help=f"Target sign: str [{self.zodiac_signs_en[0]}]", required=False)
         subparser.add_argument('-p', '--planet', type=str,
                                help=f"Planet: str [SUN]", required=False)
+        subparser.add_argument('-a', '--all', action='store_true',
+                               help=f"All signs: bool [{self.ALL_SIGNS_DEFAULT == False}]", required=False)
 
         return subparser
 
@@ -134,7 +140,7 @@ class Cli(Handler):
         subparser.add_argument(
             '--threads-max', type=int, help=f"Threads max ({self.PERFORMANCE_MESS}): int [{self.THREAD_MAX_DEFAULT}]", required=False)
         subparser.add_argument(
-            '-s', '--step', type=int, help=f"Step in minutes: int [{self.STEP_MINUTES_DEFAULT}]", required=False)
+            '-s', '--step', type=int, help=f"Step in minutes ({self.PERFORMANCE_MESS}/{self.ACCURACY_MESS}): int [{self.STEP_MINUTES_DEFAULT}]", required=False)
 
     def _cast_args(self, args: ArgsCommon):
         if args.start != None:

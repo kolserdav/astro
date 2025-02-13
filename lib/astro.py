@@ -76,6 +76,7 @@ class TransitParams(GlobalParams):
     planet: str
     sign: str
     sign_index: int
+    all: bool
 
 
 @dataclass
@@ -183,14 +184,8 @@ class Astro(Handler):
 
         return result
 
-    def find_planet_transit(self, params: TransitParams, threadNum: Optional[int] = 1):
-        self.set_params(params)
-
-        self.__set_global_params()
-
-        if self.debug:
-            print(
-                f"Start find_planet_conjunctions, thread: {threadNum}: {params}")
+    def __get_planet_transit(self, params: TransitParams, _sign_index: Optional[int] = None):
+        sign_index = _sign_index if _sign_index != None else params.sign_index
         current_time = params.start
 
         result: List[Transits] = []
@@ -205,9 +200,9 @@ class Astro(Handler):
 
             sign = self.get_zodiac_sign(planet_longitude)
 
-            if params.sign_index != sign.sign_index:
+            if sign_index != sign.sign_index:
                 current_sign = ''
-            elif params.sign_index == sign.sign_index and current_sign != sign.name_en and sign.degrees == 0:
+            elif sign_index == sign.sign_index and current_sign != sign.name_en and sign.degrees == 0:
                 current_sign = sign.name_en
                 local_time = self.convert_to_local_time(
                     current_time, self.timezone_str)
@@ -217,10 +212,19 @@ class Astro(Handler):
 
             current_time += params.step
 
-        if self.debug:
-            print(
-                f"End find_planet_transit, thread: {threadNum}: {params}")
         return result
+
+    def find_planet_transit(self, params: TransitParams,):
+        self.set_params(params)
+        self.__set_global_params()
+        results: List[List[Transits]] = []
+        if (params.all):
+            for index, _ in enumerate(self.zodiac_signs_en):
+                results.append(self.__get_planet_transit(params, index))
+        else:
+            results.append(self.__get_planet_transit(params))
+
+        return [item for sublist in results for item in sublist]
 
     def split_dates(self, start: datetime, end: datetime, step: timedelta):
         cpus = self.CPUS if self.CPUS != None else 4
@@ -248,8 +252,9 @@ class Astro(Handler):
 
     def show_transits(self, params: TransitParams):
         self.set_params(params)
-        
-        print(f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThreading: {self.multiThread}")
+
+        print(
+            f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThreading: {self.multiThread}")
 
         start = datetime.now()
 
@@ -277,7 +282,8 @@ class Astro(Handler):
                             sign=params.sign,
                             multiThread=params.multiThread,
                             maxThreads=params.maxThreads,
-                            sign_index=sign_index
+                            sign_index=sign_index,
+                            all=params.all
                         ) for chunk in chunks
                     ]
                 ))
@@ -293,7 +299,8 @@ class Astro(Handler):
                 sign=params.sign,
                 multiThread=params.multiThread,
                 maxThreads=params.maxThreads,
-                sign_index=sign_index
+                sign_index=sign_index,
+                all=params.all,
             ))
 
         print(
@@ -309,7 +316,8 @@ for: {params.step}")
             print(f"There are no matches for these params: {params}")
 
     def show_conjuctions(self, params: ConjuctionsParams):
-        print(f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThread:{params.multiThread}")
+        print(
+            f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThread:{params.multiThread}")
         self.set_params(params)
 
         start = datetime.now()

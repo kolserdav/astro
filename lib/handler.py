@@ -34,6 +34,7 @@ class Handler:
     THREAD_MAX_DEFAULT: Optional[int] = None
     WITH_TREADS_DEFAULT = True
     DEBUG_DEFAULT = False
+    ALL_SIGNS_DEFAULT = False
 
     def find_zodiac_index(self, sign: str):
         res: Optional[int] = None
