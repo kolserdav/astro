@@ -54,15 +54,15 @@ class TimeRange:
 
 @dataclass
 class GlobalParams:
+    start: datetime
+    end: datetime
+    step: timedelta
     multiThread: Optional[bool]
     maxThreads: Optional[int]
 
 
 @dataclass
 class ConjuctionsParams(GlobalParams):
-    start: datetime
-    end: datetime
-    step: timedelta
     accuracy: float
     planet1: str
     planet2: str
@@ -70,14 +70,15 @@ class ConjuctionsParams(GlobalParams):
 
 @dataclass
 class TransitParams(GlobalParams):
-    start: datetime
-    end: datetime
-    step: timedelta
     planet: str
     sign: str
     sign_index: int
     all: bool
 
+@dataclass
+class RetroParams(GlobalParams):
+    planet: str
+    out: bool
 
 @dataclass
 class Astro(Handler):
@@ -209,6 +210,27 @@ class Astro(Handler):
                 transit = Moment(
                     time=local_time, longitude=planet_longitude)
                 result.append(Transits(moment=transit, sign=sign))
+
+            current_time += params.step
+
+        return result
+    
+    def __get_planet_retro(self, params: RetroParams):
+        current_time = params.start
+
+        result: List[Moment] = []
+
+        while current_time < params.end:
+            jd = self.__get_jd(current_time=current_time)
+            ayanamsa = swe.get_ayanamsa(jd)  # type: ignore
+            planet_value = self.__get_planet_value(params.planet)
+            flags = swe.FLG_SPEED | swe.FLG_SWIEPH | swe.FLG_SPEED
+            pos, speed = swe.calc(jd, planet_value, flags)
+            print(f"{speed}")
+            
+            if speed < 0:
+                print(f"Pl {speed}: {current_time}")
+                result.append(Moment(time=current_time, longitude=pos))
 
             current_time += params.step
 
@@ -373,3 +395,61 @@ for: {params.step}, with accuracy: {params.accuracy}:")
 :{data1.minutes}:{data1.seconds}, {params.planet2}: {data2.degrees}:{data2.minutes}:{data2.seconds}")
         else:
             print(f"There are no matches for these params: {params}")
+
+    
+
+    def show_retros(self, params: RetroParams):
+        self.set_params(params)
+
+        print(
+            f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThreading: {self.multiThread}")
+
+        start = datetime.now()
+
+        transits: List[Moment] = []
+
+
+        if params.multiThread:
+            chunks = self.split_dates(
+                start=params.start, end=params.end, step=params.step)
+
+            with ProcessPoolExecutor() as executor:
+                results = list(executor.map(
+                    self.__get_planet_retro,
+                    [
+                        RetroParams(
+                            start=chunk.start,
+                            end=chunk.end,
+                            planet=params.planet,
+                            step=params.step,
+                            multiThread=params.multiThread,
+                            maxThreads=params.maxThreads,
+                            out=params.out
+                        ) for chunk in chunks
+                    ]
+                ))
+
+                transits = [
+                    item for sublist in results for item in sublist]
+        else:
+            transits = self.__get_planet_retro(RetroParams(
+                start=params.start,
+                end=params.end,
+                planet=params.planet,
+                step=params.step,
+                multiThread=params.multiThread,
+                maxThreads=params.maxThreads,
+                out=params.out,
+            ))
+
+        print(
+            f"End for: {datetime.now() - start}")
+        if transits:
+            print(
+                f"Moments, when {params.planet} move to retro {params.out}, from: {params.start}, to: {params.end}, \
+for: {params.step}")
+  #          for transit in transits:
+                #print(f"Time: {transit.time}, Sign: {transit.sign.name_ru}|{transit.sign.name_en}|{transit.sign.name_sa}|{transit.sign.sign_index}, {params.planet}: {transit.sign.degrees}\
+#:{transit.sign.minutes}:{transit.sign.seconds}")
+ #       else:   
+            #print(f"There are no matches for these params: {params}")

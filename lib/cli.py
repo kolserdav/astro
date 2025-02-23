@@ -7,6 +7,8 @@ from lib.handler import Handler
 
 @dataclass
 class ArgsCommon:
+    command: Optional[str]
+    step: Optional[int]
     start: Optional[str]
     end: Optional[str]
     threads_max:  Optional[int]
@@ -15,8 +17,6 @@ class ArgsCommon:
 
 @dataclass
 class ArgsConjuctionParsed(ArgsCommon):
-    command: Optional[str]
-    step: Optional[int]
     accuracy: Optional[float]
     planet1: Optional[str]
     planet2: Optional[str]
@@ -24,12 +24,14 @@ class ArgsConjuctionParsed(ArgsCommon):
 
 @dataclass
 class ArgsTransitParsed(ArgsCommon):
-    command: Optional[str]
-    step: Optional[int]
     planet: Optional[str]
     sign: Optional[str]
     all: Optional[bool]
 
+@dataclass
+class ArgsRetroParsed(ArgsCommon):
+    planet: Optional[str]
+    out: Optional[bool]
 
 @dataclass
 class Cli(Handler):
@@ -42,6 +44,8 @@ class Cli(Handler):
     COMMAND_CONJUCTION = 'conjuction'
 
     COMMAND_TRANSIT = 'transit'
+
+    COMMAND_RETRO = 'retro';
 
     command = ''
     start: Optional[datetime] = None
@@ -57,6 +61,7 @@ class Cli(Handler):
         planet1=None,
         planet2=None
     )
+    
     args_transit = ArgsTransitParsed(
         command=None,
         start=None,
@@ -67,6 +72,17 @@ class Cli(Handler):
         planet=None,
         sign=None,
         all=None
+    )
+
+    args_retro = ArgsRetroParsed(
+        command=None,
+        start=None,
+        end=None,
+        step=None,
+        no_threads=None,
+        threads_max=None,
+        planet=None,
+        out=None
     )
 
     def argparse(self):
@@ -80,6 +96,9 @@ class Cli(Handler):
         subparser = self.__set_transit_args()
         self.set_common_args(subparser=subparser)
 
+        subparser = self.__set_retro_args()
+        self.set_common_args(subparser=subparser)
+        
         args: Any = parser.parse_args()
 
         self.command = args.command
@@ -93,9 +112,27 @@ class Cli(Handler):
             self.args_conjuction = args
         elif (self.command == self.COMMAND_TRANSIT):
             self.args_transit = args
+        elif (self.command == self.COMMAND_RETRO):
+            self.args_retro = args
 
     def __get_clean_time_format(self):
         return str(self.TIME_FORMAT).replace('%', '')
+
+    
+    def __set_retro_args(self):
+        if (self._subparsers == None):
+            print(f"Subparser is None in __set_retro_args")
+            return
+
+        subparser = self._subparsers.add_parser(
+            name=self.COMMAND_RETRO, description='Get planet retro')
+
+        subparser.add_argument(
+            '--out', help=f"Is starting direct: str [{self.OUT_DEFAULT}]", action='store_true', required=False)
+        subparser.add_argument('-p', '--planet', type=str,
+                               help=f"Planet: str [SUN]", required=False)
+
+        return subparser
 
     def __set_transit_args(self):
         if (self._subparsers == None):

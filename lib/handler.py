@@ -35,6 +35,7 @@ class Handler:
     WITH_TREADS_DEFAULT = True
     DEBUG_DEFAULT = False
     ALL_SIGNS_DEFAULT = False
+    OUT_DEFAULT = False
 
     def find_zodiac_index(self, sign: str):
         res: Optional[int] = None
