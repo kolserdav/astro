@@ -47,6 +47,13 @@ class Transits:
 
 
 @dataclass
+class Retros:
+    moment: Moment
+    sign: Sign
+    out: bool
+
+
+@dataclass
 class TimeRange:
     start: datetime
     end: datetime
@@ -217,28 +224,58 @@ class Astro(Handler):
 
         return result
 
-    def __get_planet_retro(self, params: RetroParams):
+    def get_planet_retro(self, params: RetroParams):
         current_time = params.start
 
-        result: List[Moment] = []
+        result: List[Retros] = []
+
+        previous_longitude: Optional[float] = None
+
+        retro_started = False
+
+        retro_ended = False
 
         while current_time < params.end:
             jd = self.__get_jd(current_time=current_time)
-            ayanamsa = swe.get_ayanamsa(jd)  # type: ignore
-            planet_value = self.__get_planet_value(params.planet)
-            flags = swe.FLG_SPEED | swe.FLG_SWIEPH | swe.FLG_SPEED
-            pos, speed = swe.calc(jd, planet_value, flags)
-            print(f"{speed}")
+            ayanamsa = swe.get_ayanamsa(jd)  # Получаем аянансу
+            planet_longitude = self.__get_planet_longitude(
+                planet=params.planet, jd=jd, ayanamsa=ayanamsa)
 
-            if speed < 0:
-                print(f"Pl {speed}: {current_time}")
-                result.append(Moment(time=current_time, longitude=pos))
+            if previous_longitude is not None:
+                if (planet_longitude < previous_longitude and
+                        ((previous_longitude - planet_longitude) < 180) and not retro_started):
+                    if (retro_ended):
+                        sign = self.__get_zodiac_sign(
+                            longitude=planet_longitude)
+                        result.append(Retros(
+                            sign=sign,
+                            out=False,
+                            moment=Moment(
+                                longitude=planet_longitude, time=current_time)
+                        ))
+                    retro_started = True
+                    retro_ended = False
+                elif ((planet_longitude > previous_longitude) and
+                      not retro_ended):
+                    if (retro_started):
+                        sign = self.__get_zodiac_sign(
+                            longitude=planet_longitude)
+                        result.append(Retros(
+                            sign=sign,
+                            out=True,
+                            moment=Moment(
+                                longitude=planet_longitude, time=current_time)
+                        ))
+                    retro_ended = True
+                    retro_started = False
+
+            previous_longitude = planet_longitude
 
             current_time += params.step
 
         return result
 
-    def __find_planet_transit(self, params: TransitParams,):
+    def find_planet_transit(self, params: TransitParams,):
         self.__set_params(params)
         self.__set_global_params()
         results: List[List[Transits]] = []
@@ -249,6 +286,9 @@ class Astro(Handler):
             results.append(self.__get_planet_transit(params))
 
         return [item for sublist in results for item in sublist]
+
+    def __show_sign(self, sign: Sign):
+        return f"{sign.name_ru}|{sign.name_en}|{sign.name_sa}|{sign.sign_index + 1}"
 
     def split_dates(self, start: datetime, end: datetime, step: timedelta):
         cpus = self.CPUS if self.CPUS != None else 4
@@ -296,7 +336,7 @@ class Astro(Handler):
 
             with ProcessPoolExecutor() as executor:
                 results = list(executor.map(
-                    self.__find_planet_transit,
+                    self.find_planet_transit,
                     [
                         TransitParams(
                             start=chunk.start,
@@ -315,7 +355,7 @@ class Astro(Handler):
                 transits = [
                     item for sublist in results for item in sublist]
         else:
-            transits = self.__find_planet_transit(TransitParams(
+            transits = self.find_planet_transit(TransitParams(
                 start=params.start,
                 end=params.end,
                 planet=params.planet,
@@ -334,7 +374,7 @@ class Astro(Handler):
                 f"Moments, when {params.planet} move to sign {params.sign}, from: {params.start}, to: {params.end}, \
 for: {params.step}")
             for transit in transits:
-                print(f"Time: {transit.moment.time}, Sign: {transit.sign.name_ru}|{transit.sign.name_en}|{transit.sign.name_sa}|{transit.sign.sign_index}, {params.planet}: {transit.sign.degrees}\
+                print(f"Time: {transit.moment.time}, Sign: {self.__show_sign(transit.sign)}, {params.planet}: {transit.sign.degrees}\
 :{transit.sign.minutes}:{transit.sign.seconds}")
         else:
             print(f"There are no matches for these params: {params}")
@@ -393,7 +433,7 @@ for: {params.step}, with accuracy: {params.accuracy}:")
                 time = moment.planet1.time.strftime(self.TIME_FORMAT)
                 data1: Sign = self.__get_zodiac_sign(moment.planet1.longitude)
                 data2: Sign = self.__get_zodiac_sign(moment.planet2.longitude)
-                print(f"Time: {time}, Sign: {data1.name_ru}|{data1.name_en}|{data1.name_sa}|{data1.sign_index}, {params.planet1}: {data1.degrees}\
+                print(f"Time: {time}, Sign: {self.__show_sign(data1)}, {params.planet1}: {data1.degrees}\
 :{data1.minutes}:{data1.seconds}, {params.planet2}: {data2.degrees}:{data2.minutes}:{data2.seconds}")
         else:
             print(f"There are no matches for these params: {params}")
@@ -406,7 +446,7 @@ for: {params.step}, with accuracy: {params.accuracy}:")
 
         start = datetime.now()
 
-        retros: List[Moment] = []
+        retros: List[Retros] = []
 
         if params.multiThread:
             chunks = self.split_dates(
@@ -414,7 +454,7 @@ for: {params.step}, with accuracy: {params.accuracy}:")
 
             with ProcessPoolExecutor() as executor:
                 results = list(executor.map(
-                    self.__get_planet_retro,
+                    self.get_planet_retro,
                     [
                         RetroParams(
                             start=chunk.start,
@@ -431,7 +471,7 @@ for: {params.step}, with accuracy: {params.accuracy}:")
                 retros = [
                     item for sublist in results for item in sublist]
         else:
-            retros = self.__get_planet_retro(RetroParams(
+            retros = self.get_planet_retro(RetroParams(
                 start=params.start,
                 end=params.end,
                 planet=params.planet,
@@ -445,10 +485,10 @@ for: {params.step}, with accuracy: {params.accuracy}:")
             f"End for: {datetime.now() - start}")
         if retros:
             print(
-                f"Moments, when {params.planet} move to retro {params.out}, from: {params.start}, to: {params.end}, \
+                f"Moments, when {params.planet} is starting or stoppind retro: {params.start}, to: {params.end}, \
 for: {params.step}")
-  #          for transit in transits:
-            # print(f"Time: {transit.time}, Sign: {transit.sign.name_ru}|{transit.sign.name_en}|{transit.sign.name_sa}|{transit.sign.sign_index}, {params.planet}: {transit.sign.degrees}\
-# :{transit.sign.minutes}:{transit.sign.seconds}")
- #       else:
-            # print(f"There are no matches for these params: {params}")
+            for retro in retros:
+                print(f"Time: {retro.moment.time}, Retro is: {not retro.out} Sign: {self.__show_sign(retro.sign)}, {params.planet}: {retro.sign.degrees}\
+:{retro.sign.minutes}:{retro.sign.seconds}")
+        else:
+            print(f"There are no matches for these params: {params}")
