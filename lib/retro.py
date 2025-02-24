@@ -72,6 +72,10 @@ class Retro(Astro):
     def show(self, params: RetroParams):
         self._set_params(params)
 
+        if (params.planet == self.planet.Sun or params.planet == self.planet.Moon):
+            print(f"Planet {params.planet} can not be retrograde")
+            exit(2)
+
         print(
             f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThreading: {self.multiThread}")
 
