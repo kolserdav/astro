@@ -5,6 +5,19 @@ from typing import Optional
 
 
 @dataclass
+class Planet:
+    Sun = 'SUN'
+    Moon = 'MOON'
+    Mercury = 'MERCURY'
+    Mars = 'MARS'
+    Venus = 'VENUS'
+    Saturn = 'SATURN'
+    Jupiter = 'JUPITER'
+    Rahu = 'TRUE_NODE'
+    Ketu = 'KETU'
+
+
+@dataclass
 class Handler:
     zodiac_signs_ru = [
         "Овен", "Телец", "Близнецы", "Рак",
@@ -24,6 +37,8 @@ class Handler:
         "Sagittarius", "Capricorn", "Aquarius", "Pisces"
     ]
 
+    planet = Planet()
+
     SIGN_DEFAULT = 'Овен'
     TIME_ZONE_STR_DEFAULT = 'Asia/Krasnoyarsk'
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -35,6 +50,13 @@ class Handler:
     WITH_TREADS_DEFAULT = True
     DEBUG_DEFAULT = False
     ALL_SIGNS_DEFAULT = False
+
+    def _show_all_planets(self):
+        planets = [value for name, value in Planet.__dict__.items(
+        ) if not name.startswith('__') and isinstance(value, str)]
+        separator = ', '
+        result = separator.join(planets)
+        print(result)
 
     def find_zodiac_index(self, sign: str):
         res: Optional[int] = None
