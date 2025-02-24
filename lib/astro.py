@@ -75,10 +75,12 @@ class TransitParams(GlobalParams):
     sign_index: int
     all: bool
 
+
 @dataclass
 class RetroParams(GlobalParams):
     planet: str
     out: bool
+
 
 @dataclass
 class Astro(Handler):
@@ -103,16 +105,16 @@ class Astro(Handler):
         self.timezone_str = timezone_str
         self.debug = debug
 
-    def convert_to_local_time(self, utc_time, timezone_str) -> datetime:
+    def __convert_to_local_time(self, utc_time, timezone_str) -> datetime:
         timezone = pytz.timezone(timezone_str)
         local_time = utc_time.replace(tzinfo=pytz.utc).astimezone(timezone)
         return local_time
 
-    def set_params(self, params: GlobalParams):
+    def __set_params(self, params: GlobalParams):
         self.multiThread = params.multiThread
         self.max_threads = params.maxThreads
 
-    def get_zodiac_sign(self, longitude) -> Sign:
+    def __get_zodiac_sign(self, longitude) -> Sign:
         sign_index = int(longitude // 30)
         degree_in_sign = longitude % 30
 
@@ -155,7 +157,7 @@ class Astro(Handler):
             planet_data[0][0] + shift - ayanamsa)
 
     def find_planet_conjunctions(self, params: ConjuctionsParams, threadNum: Optional[int] = 1):
-        self.set_params(params)
+        self.__set_params(params)
 
         self.__set_global_params()
 
@@ -175,7 +177,7 @@ class Astro(Handler):
                 planet=params.planet2, jd=jd, ayanamsa=ayanamsa)
 
             if abs(planet1_longitude - planet2_longitude) < params.accuracy:
-                local_time = self.convert_to_local_time(
+                local_time = self.__convert_to_local_time(
                     current_time, self.timezone_str)
                 conjuction = Conjuctions(planet1=Moment(
                     time=local_time, longitude=planet1_longitude), planet2=Moment(time=local_time, longitude=planet2_longitude))
@@ -199,13 +201,13 @@ class Astro(Handler):
             planet_longitude = self.__get_planet_longitude(
                 planet=params.planet, jd=jd, ayanamsa=ayanamsa)
 
-            sign = self.get_zodiac_sign(planet_longitude)
+            sign = self.__get_zodiac_sign(planet_longitude)
 
             if sign_index != sign.sign_index:
                 current_sign = ''
             elif sign_index == sign.sign_index and current_sign != sign.name_en and sign.degrees == 0:
                 current_sign = sign.name_en
-                local_time = self.convert_to_local_time(
+                local_time = self.__convert_to_local_time(
                     current_time, self.timezone_str)
                 transit = Moment(
                     time=local_time, longitude=planet_longitude)
@@ -214,7 +216,7 @@ class Astro(Handler):
             current_time += params.step
 
         return result
-    
+
     def __get_planet_retro(self, params: RetroParams):
         current_time = params.start
 
@@ -227,7 +229,7 @@ class Astro(Handler):
             flags = swe.FLG_SPEED | swe.FLG_SWIEPH | swe.FLG_SPEED
             pos, speed = swe.calc(jd, planet_value, flags)
             print(f"{speed}")
-            
+
             if speed < 0:
                 print(f"Pl {speed}: {current_time}")
                 result.append(Moment(time=current_time, longitude=pos))
@@ -236,8 +238,8 @@ class Astro(Handler):
 
         return result
 
-    def find_planet_transit(self, params: TransitParams,):
-        self.set_params(params)
+    def __find_planet_transit(self, params: TransitParams,):
+        self.__set_params(params)
         self.__set_global_params()
         results: List[List[Transits]] = []
         if (params.all):
@@ -273,7 +275,7 @@ class Astro(Handler):
         return res
 
     def show_transits(self, params: TransitParams):
-        self.set_params(params)
+        self.__set_params(params)
 
         print(
             f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThreading: {self.multiThread}")
@@ -294,7 +296,7 @@ class Astro(Handler):
 
             with ProcessPoolExecutor() as executor:
                 results = list(executor.map(
-                    self.find_planet_transit,
+                    self.__find_planet_transit,
                     [
                         TransitParams(
                             start=chunk.start,
@@ -313,7 +315,7 @@ class Astro(Handler):
                 transits = [
                     item for sublist in results for item in sublist]
         else:
-            transits = self.find_planet_transit(TransitParams(
+            transits = self.__find_planet_transit(TransitParams(
                 start=params.start,
                 end=params.end,
                 planet=params.planet,
@@ -340,7 +342,7 @@ for: {params.step}")
     def show_conjuctions(self, params: ConjuctionsParams):
         print(
             f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThread:{params.multiThread}")
-        self.set_params(params)
+        self.__set_params(params)
 
         start = datetime.now()
 
@@ -389,25 +391,22 @@ for: {params.step}")
 for: {params.step}, with accuracy: {params.accuracy}:")
             for moment in conjunctions:
                 time = moment.planet1.time.strftime(self.TIME_FORMAT)
-                data1: Sign = self.get_zodiac_sign(moment.planet1.longitude)
-                data2: Sign = self.get_zodiac_sign(moment.planet2.longitude)
+                data1: Sign = self.__get_zodiac_sign(moment.planet1.longitude)
+                data2: Sign = self.__get_zodiac_sign(moment.planet2.longitude)
                 print(f"Time: {time}, Sign: {data1.name_ru}|{data1.name_en}|{data1.name_sa}|{data1.sign_index}, {params.planet1}: {data1.degrees}\
 :{data1.minutes}:{data1.seconds}, {params.planet2}: {data2.degrees}:{data2.minutes}:{data2.seconds}")
         else:
             print(f"There are no matches for these params: {params}")
 
-    
-
     def show_retros(self, params: RetroParams):
-        self.set_params(params)
+        self.__set_params(params)
 
         print(
             f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThreading: {self.multiThread}")
 
         start = datetime.now()
 
-        transits: List[Moment] = []
-
+        retros: List[Moment] = []
 
         if params.multiThread:
             chunks = self.split_dates(
@@ -429,10 +428,10 @@ for: {params.step}, with accuracy: {params.accuracy}:")
                     ]
                 ))
 
-                transits = [
+                retros = [
                     item for sublist in results for item in sublist]
         else:
-            transits = self.__get_planet_retro(RetroParams(
+            retros = self.__get_planet_retro(RetroParams(
                 start=params.start,
                 end=params.end,
                 planet=params.planet,
@@ -444,12 +443,12 @@ for: {params.step}, with accuracy: {params.accuracy}:")
 
         print(
             f"End for: {datetime.now() - start}")
-        if transits:
+        if retros:
             print(
                 f"Moments, when {params.planet} move to retro {params.out}, from: {params.start}, to: {params.end}, \
 for: {params.step}")
   #          for transit in transits:
-                #print(f"Time: {transit.time}, Sign: {transit.sign.name_ru}|{transit.sign.name_en}|{transit.sign.name_sa}|{transit.sign.sign_index}, {params.planet}: {transit.sign.degrees}\
-#:{transit.sign.minutes}:{transit.sign.seconds}")
- #       else:   
-            #print(f"There are no matches for these params: {params}")
+            # print(f"Time: {transit.time}, Sign: {transit.sign.name_ru}|{transit.sign.name_en}|{transit.sign.name_sa}|{transit.sign.sign_index}, {params.planet}: {transit.sign.degrees}\
+# :{transit.sign.minutes}:{transit.sign.seconds}")
+ #       else:
+            # print(f"There are no matches for these params: {params}")

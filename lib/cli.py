@@ -28,10 +28,12 @@ class ArgsTransitParsed(ArgsCommon):
     sign: Optional[str]
     all: Optional[bool]
 
+
 @dataclass
 class ArgsRetroParsed(ArgsCommon):
     planet: Optional[str]
     out: Optional[bool]
+
 
 @dataclass
 class Cli(Handler):
@@ -45,7 +47,7 @@ class Cli(Handler):
 
     COMMAND_TRANSIT = 'transit'
 
-    COMMAND_RETRO = 'retro';
+    COMMAND_RETRO = 'retro'
 
     command = ''
     start: Optional[datetime] = None
@@ -61,7 +63,7 @@ class Cli(Handler):
         planet1=None,
         planet2=None
     )
-    
+
     args_transit = ArgsTransitParsed(
         command=None,
         start=None,
@@ -98,7 +100,7 @@ class Cli(Handler):
 
         subparser = self.__set_retro_args()
         self.set_common_args(subparser=subparser)
-        
+
         args: Any = parser.parse_args()
 
         self.command = args.command
@@ -118,7 +120,6 @@ class Cli(Handler):
     def __get_clean_time_format(self):
         return str(self.TIME_FORMAT).replace('%', '')
 
-    
     def __set_retro_args(self):
         if (self._subparsers == None):
             print(f"Subparser is None in __set_retro_args")
