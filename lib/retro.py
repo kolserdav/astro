@@ -77,7 +77,7 @@ class Retro(Astro):
 
         start = datetime.now()
 
-        retros: List[Retros] = []
+        items: List[Retros] = []
 
         if params.multiThread:
             chunks = self.split_dates(
@@ -98,10 +98,10 @@ class Retro(Astro):
                     ]
                 ))
 
-                retros = [
+                items = [
                     item for sublist in results for item in sublist]
         else:
-            retros = self.get(RetroParams(
+            items = self.get(RetroParams(
                 start=params.start,
                 end=params.end,
                 planet=params.planet,
@@ -112,12 +112,12 @@ class Retro(Astro):
 
         print(
             f"End for: {datetime.now() - start}")
-        if retros:
+        if items:
             print(
                 f"Moments, when {params.planet} is starting or stoppind retro: {params.start}, to: {params.end}, \
 for: {params.step}")
-            for retro in retros:
-                print(f"Time: {retro.moment.time}, Retro is: {not retro.out} Sign: {self._show_sign(retro.sign)}, {params.planet}: {retro.sign.degrees}\
-:{retro.sign.minutes}:{retro.sign.seconds}")
+            for item in items:
+                print(
+                    f"Time: {item.moment.time}, Retro is: {not item.out} Sign: {self._show_sign(item.sign)}, {params.planet}: {self._show_degres(item.sign)}")
         else:
             print(f"There are no matches for these params: {params}")

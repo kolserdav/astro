@@ -118,6 +118,9 @@ class Astro(Handler):
     def _show_sign(self, sign: Sign):
         return f"{sign.name_ru}|{sign.name_en}|{sign.name_sa}|{sign.sign_index + 1}"
 
+    def _show_degres(self, sign: Sign):
+        return f"{sign.degrees}:{sign.minutes}:{sign.seconds}"
+
     def split_dates(self, start: datetime, end: datetime, step: timedelta):
         cpus = self.CPUS if self.CPUS != None else 4
         cpus = self.max_threads if self.max_threads != None and cpus > self.max_threads else cpus

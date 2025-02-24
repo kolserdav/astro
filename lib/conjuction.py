@@ -57,7 +57,7 @@ class Conjuction(Astro):
 
         start = datetime.now()
 
-        conjunctions: List[Conjuctions] = []
+        items: List[Conjuctions] = []
 
         if params.multiThread:
             chunks = self.split_dates(
@@ -80,10 +80,10 @@ class Conjuction(Astro):
                     ]
                 ))
 
-                conjunctions = [
+                items = [
                     item for sublist in results for item in sublist]
         else:
-            conjunctions = self.find(ConjuctionsParams(
+            items = self.find(ConjuctionsParams(
                 start=params.start,
                 end=params.end,
                 accuracy=params.accuracy,
@@ -96,14 +96,14 @@ class Conjuction(Astro):
 
         print(
             f"End for: {datetime.now() - start}")
-        if conjunctions:
+        if items:
             print(
                 f"Moments, when {params.planet1} and {params.planet2} are in one degree, from: {params.start}, to: {params.end}, \
 for: {params.step}, with accuracy: {params.accuracy}:")
-            for moment in conjunctions:
-                time = moment.planet1.time.strftime(self.TIME_FORMAT)
-                data1: Sign = self._get_zodiac_sign(moment.planet1.longitude)
-                data2: Sign = self._get_zodiac_sign(moment.planet2.longitude)
+            for item in items:
+                time = item.planet1.time.strftime(self.TIME_FORMAT)
+                data1: Sign = self._get_zodiac_sign(item.planet1.longitude)
+                data2: Sign = self._get_zodiac_sign(item.planet2.longitude)
                 print(f"Time: {time}, Sign: {self._show_sign(data1)}, {params.planet1}: {data1.degrees}\
 :{data1.minutes}:{data1.seconds}, {params.planet2}: {data2.degrees}:{data2.minutes}:{data2.seconds}")
         else:

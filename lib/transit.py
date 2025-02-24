@@ -70,7 +70,7 @@ class Transit(Astro):
 
         start = datetime.now()
 
-        transits: List[Transits] = []
+        items: List[Transits] = []
 
         sign_index = self.find_zodiac_index(params.sign)
         if (sign_index == None):
@@ -100,10 +100,10 @@ class Transit(Astro):
                     ]
                 ))
 
-                transits = [
+                items = [
                     item for sublist in results for item in sublist]
         else:
-            transits = self.find(TransitParams(
+            items = self.find(TransitParams(
                 start=params.start,
                 end=params.end,
                 planet=params.planet,
@@ -117,12 +117,12 @@ class Transit(Astro):
 
         print(
             f"End for: {datetime.now() - start}")
-        if transits:
+        if items:
             print(
                 f"Moments, when {params.planet} move to sign {params.sign}, from: {params.start}, to: {params.end}, \
 for: {params.step}")
-            for transit in transits:
-                print(f"Time: {transit.moment.time}, Sign: {self._show_sign(transit.sign)}, {params.planet}: {transit.sign.degrees}\
-:{transit.sign.minutes}:{transit.sign.seconds}")
+            for item in items:
+                print(
+                    f"Time: {item.moment.time}, Sign: {self._show_sign(item.sign)}, {params.planet}: {self._show_degres(item.sign)}")
         else:
             print(f"There are no matches for these params: {params}")
