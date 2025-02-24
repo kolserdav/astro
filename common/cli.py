@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional
-from lib.handler import Handler
+from common.handler import Handler
 
 
 @dataclass
@@ -32,7 +32,11 @@ class ArgsTransitParsed(ArgsCommon):
 @dataclass
 class ArgsRetroParsed(ArgsCommon):
     planet: Optional[str]
-    out: Optional[bool]
+
+
+@dataclass
+class ArgsPlanetsParsed:
+    all: Optional[bool]
 
 
 @dataclass
@@ -48,6 +52,8 @@ class Cli(Handler):
     COMMAND_TRANSIT = 'transit'
 
     COMMAND_RETRO = 'retro'
+
+    COMMAND_PLANETS = 'planet'
 
     command = ''
     start: Optional[datetime] = None
@@ -84,7 +90,10 @@ class Cli(Handler):
         no_threads=None,
         threads_max=None,
         planet=None,
-        out=None
+    )
+
+    args_planets = ArgsPlanetsParsed(
+        all=None
     )
 
     def argparse(self):
@@ -101,21 +110,26 @@ class Cli(Handler):
         subparser = self.__set_retro_args()
         self.set_common_args(subparser=subparser)
 
+        subparser = self.__set_planets_args()
+
         args: Any = parser.parse_args()
 
         self.command = args.command
 
         if (self.command == None):
             print(f"Command is not passed, try add -h|-help parameter")
-        else:
-            self._cast_args(args)
 
         if (self.command == self.COMMAND_CONJUCTION):
             self.args_conjuction = args
+            self._cast_args(args)
         elif (self.command == self.COMMAND_TRANSIT):
             self.args_transit = args
+            self._cast_args(args)
         elif (self.command == self.COMMAND_RETRO):
             self.args_retro = args
+            self._cast_args(args)
+        elif (self.command == self.COMMAND_PLANETS):
+            self.args_planets = args
 
     def __get_clean_time_format(self):
         return str(self.TIME_FORMAT).replace('%', '')
@@ -128,10 +142,21 @@ class Cli(Handler):
         subparser = self._subparsers.add_parser(
             name=self.COMMAND_RETRO, description='Get planet retro')
 
-        subparser.add_argument(
-            '--out', help=f"Is starting direct: str [{self.OUT_DEFAULT}]", action='store_true', required=False)
         subparser.add_argument('-p', '--planet', type=str,
                                help=f"Planet: str [SUN]", required=False)
+
+        return subparser
+
+    def __set_planets_args(self):
+        if (self._subparsers == None):
+            print(f"Subparser is None in __set_planets_args")
+            return
+
+        subparser = self._subparsers.add_parser(
+            name=self.COMMAND_PLANETS, description='Planet info')
+
+        subparser.add_argument('-a', '--all', action='store_true',
+                               help=f"Show all supported planets: bool", required=False)
 
         return subparser
 

@@ -1,5 +1,8 @@
-from lib.astro import Astro, ConjuctionsParams, RetroParams, TransitParams
-from lib.cli import Cli
+from lib.conjuction import ConjuctionsParams, Conjuction
+from lib.transit import TransitParams, Transit
+from lib.retro import RetroParams, Retro
+from lib.planet import PlanetParams, Planet
+from common.cli import Cli
 from datetime import timedelta
 
 
@@ -8,12 +11,12 @@ def main():
     cli = Cli()
     cli.argparse()
 
-    astro = Astro(
-        timezone_str=cli.TIME_ZONE_STR_DEFAULT,
-        debug=cli.DEBUG_DEFAULT
-    )
     if cli.command == cli.COMMAND_CONJUCTION:
-        astro.show_conjuctions(
+        astro = Conjuction(
+            timezone_str=cli.TIME_ZONE_STR_DEFAULT,
+            debug=cli.DEBUG_DEFAULT
+        )
+        astro.show(
             ConjuctionsParams(
                 start=cli.start if cli.start != None else cli.START_DEFAULT,
                 end=cli.end if cli.end != None else cli.END_DEFAULT,
@@ -27,7 +30,11 @@ def main():
             )
         )
     elif cli.command == cli.COMMAND_TRANSIT:
-        astro.show_transits(
+        astro = Transit(
+            timezone_str=cli.TIME_ZONE_STR_DEFAULT,
+            debug=cli.DEBUG_DEFAULT
+        )
+        astro.show(
             TransitParams(
                 start=cli.start if cli.start != None else cli.START_DEFAULT,
                 end=cli.end if cli.end != None else cli.END_DEFAULT,
@@ -42,7 +49,11 @@ def main():
             )
         )
     elif cli.command == cli.COMMAND_RETRO:
-        astro.show_retros(
+        astro = Retro(
+            timezone_str=cli.TIME_ZONE_STR_DEFAULT,
+            debug=cli.DEBUG_DEFAULT
+        )
+        astro.show(
             RetroParams(
                 start=cli.start if cli.start != None else cli.START_DEFAULT,
                 end=cli.end if cli.end != None else cli.END_DEFAULT,
@@ -51,8 +62,16 @@ def main():
                 planet=cli.args_retro.planet if cli.args_retro.planet != None else astro.planet.Sun,
                 multiThread=False if cli.args_retro.no_threads == True else cli.WITH_TREADS_DEFAULT,
                 maxThreads=cli.args_retro.threads_max if cli.args_retro.threads_max else cli.THREAD_MAX_DEFAULT,
-                out=cli.args_retro.out if cli.args_retro.out != None else cli.OUT_DEFAULT
             )
         )
+    elif cli.command == cli.COMMAND_PLANETS:
+        astro = Planet(
+            timezone_str=cli.TIME_ZONE_STR_DEFAULT,
+            debug=cli.DEBUG_DEFAULT
+        )
+        astro.show(PlanetParams(
+            all=cli.args_planets.all if cli.args_planets.all != None else False
+        ))
+
 
 main()

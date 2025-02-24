@@ -1,6 +1,76 @@
-class Retro:
+from common.astro import Astro, GlobalParams, Moment, Sign
+from concurrent.futures import ProcessPoolExecutor
+from dataclasses import dataclass
+from datetime import datetime
+from typing import List, Optional
+
+
+@dataclass
+class RetroParams(GlobalParams):
+    planet: str
+
+
+@dataclass
+class Retros:
+    moment: Moment
+    sign: Sign
+    out: bool
+
+
+class Retro(Astro):
+    def get(self, params: RetroParams):
+        current_time = params.start
+
+        result: List[Retros] = []
+
+        previous_longitude: Optional[float] = None
+
+        retro_started = False
+
+        retro_ended = False
+
+        while current_time < params.end:
+            jd = self._get_jd(current_time=current_time)
+            ayanamsa = self._get_ayanamsa(jd)
+            planet_longitude = self._get_planet_longitude(
+                planet=params.planet, jd=jd, ayanamsa=ayanamsa)
+
+            if previous_longitude is not None:
+                if (planet_longitude < previous_longitude and
+                        ((previous_longitude - planet_longitude) < 180) and not retro_started):
+                    if (retro_ended):
+                        sign = self._get_zodiac_sign(
+                            longitude=planet_longitude)
+                        result.append(Retros(
+                            sign=sign,
+                            out=False,
+                            moment=Moment(
+                                longitude=planet_longitude, time=current_time)
+                        ))
+                    retro_started = True
+                    retro_ended = False
+                elif ((planet_longitude > previous_longitude) and
+                        not retro_ended):
+                    if (retro_started):
+                        sign = self._get_zodiac_sign(
+                            longitude=planet_longitude)
+                        result.append(Retros(
+                            sign=sign,
+                            out=True,
+                            moment=Moment(
+                                longitude=planet_longitude, time=current_time)
+                        ))
+                    retro_ended = True
+                    retro_started = False
+
+            previous_longitude = planet_longitude
+
+            current_time += params.step
+
+        return result
+
     def show(self, params: RetroParams):
-        self.__set_params(params)
+        self._set_params(params)
 
         print(
             f"Starting, timezone: {self.timezone_str}, debug: {self.debug}, multiThreading: {self.multiThread}")
@@ -15,7 +85,7 @@ class Retro:
 
             with ProcessPoolExecutor() as executor:
                 results = list(executor.map(
-                    self.get_planet_retro,
+                    self.get,
                     [
                         RetroParams(
                             start=chunk.start,
@@ -24,7 +94,6 @@ class Retro:
                             step=params.step,
                             multiThread=params.multiThread,
                             maxThreads=params.maxThreads,
-                            out=params.out
                         ) for chunk in chunks
                     ]
                 ))
@@ -32,14 +101,13 @@ class Retro:
                 retros = [
                     item for sublist in results for item in sublist]
         else:
-            retros = self.get_planet_retro(RetroParams(
+            retros = self.get(RetroParams(
                 start=params.start,
                 end=params.end,
                 planet=params.planet,
                 step=params.step,
                 multiThread=params.multiThread,
                 maxThreads=params.maxThreads,
-                out=params.out,
             ))
 
         print(
@@ -49,7 +117,7 @@ class Retro:
                 f"Moments, when {params.planet} is starting or stoppind retro: {params.start}, to: {params.end}, \
 for: {params.step}")
             for retro in retros:
-                print(f"Time: {retro.moment.time}, Retro is: {not retro.out} Sign: {self.__show_sign(retro.sign)}, {params.planet}: {retro.sign.degrees}\
+                print(f"Time: {retro.moment.time}, Retro is: {not retro.out} Sign: {self._show_sign(retro.sign)}, {params.planet}: {retro.sign.degrees}\
 :{retro.sign.minutes}:{retro.sign.seconds}")
         else:
             print(f"There are no matches for these params: {params}")
