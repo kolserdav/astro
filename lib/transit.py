@@ -30,7 +30,7 @@ class Transit(Astro):
 
         while current_time < params.end:
             jd = self._get_jd(current_time=current_time)
-            ayanamsa = swe.get_ayanamsa(jd)  # type: ignore
+            ayanamsa = self._get_ayanamsa(jd)
             planet_longitude = self._get_planet_longitude(
                 planet=params.planet, jd=jd, ayanamsa=ayanamsa)
 

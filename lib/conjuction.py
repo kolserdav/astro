@@ -33,7 +33,7 @@ class Conjuction(Astro):
 
         while current_time < params.end:
             jd = self._get_jd(current_time=current_time)
-            ayanamsa = swe.get_ayanamsa(jd)  # type: ignore
+            ayanamsa = self._get_ayanamsa(jd)
             planet1_longitude = self._get_planet_longitude(
                 planet=params.planet1, jd=jd, ayanamsa=ayanamsa)
             planet2_longitude = self._get_planet_longitude(
