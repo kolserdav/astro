@@ -45,7 +45,9 @@ def main():
                 maxThreads=cli.args_transit.threads_max if cli.args_transit.threads_max else cli.THREAD_MAX_DEFAULT,
                 sign=cli.args_transit.sign if cli.args_transit.sign != None else cli.SIGN_DEFAULT,
                 sign_index=0,
-                all=cli.args_transit.all if cli.args_transit.all != None else cli.ALL_SIGNS_DEFAULT
+                all=cli.args_transit.all if cli.args_transit.all != None else cli.ALL_SIGNS_DEFAULT,
+                nakshatra=cli.args_transit.nakshatra if cli.args_transit.nakshatra != None else cli.NAKHATRA_DEFAULT,
+                nakshatra_index=0
             )
         )
     elif cli.command == cli.COMMAND_RETRO:

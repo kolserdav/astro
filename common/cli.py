@@ -27,6 +27,7 @@ class ArgsTransitParsed(ArgsCommon):
     planet: Optional[str]
     sign: Optional[str]
     all: Optional[bool]
+    nakshatra: Optional[str]
 
 
 @dataclass
@@ -79,7 +80,8 @@ class Cli(Handler):
         threads_max=None,
         planet=None,
         sign=None,
-        all=None
+        all=None,
+        nakshatra=None
     )
 
     args_retro = ArgsRetroParsed(
@@ -174,6 +176,8 @@ class Cli(Handler):
                                help=f"Planet: str [SUN]", required=False)
         subparser.add_argument('-a', '--all', action='store_true',
                                help=f"All signs: bool [{self.ALL_SIGNS_DEFAULT == False}]", required=False)
+        subparser.add_argument('-n', '--nakshatra',  type=str,
+                               help=f"Nakshatra name: str [None]", required=False)
 
         return subparser
 

@@ -116,7 +116,7 @@ class Astro(Handler):
         return swe.get_ayanamsa(jd)  # type: ignore
 
     def _show_sign(self, sign: Sign, longitude: float):
-        nakshatra, pada = self._get_nakshatra(longitude=longitude)
+        nakshatra, pada, _ = self._get_nakshatra(longitude=longitude)
         return f"{sign.name_ru}|{sign.name_en}|{sign.name_sa}:{sign.sign_index + 1}:{nakshatra}({pada})"
 
     def _show_degres(self, sign: Sign):

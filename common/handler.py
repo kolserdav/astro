@@ -59,6 +59,7 @@ class Handler:
     WITH_TREADS_DEFAULT = True
     DEBUG_DEFAULT = False
     ALL_SIGNS_DEFAULT = False
+    NAKHATRA_DEFAULT = 'default'
 
     def _show_all_planets(self):
         planets = [value for name, value in Planet.__dict__.items(
@@ -66,6 +67,14 @@ class Handler:
         separator = ', '
         result = separator.join(planets)
         print(result)
+
+    def find_nakshatra_index(self, name: str):
+        res: Optional[int] = None
+        try:
+            res = self.nakshatras.index(name)
+        except ValueError:
+            pass
+        return res
 
     def find_zodiac_index(self, sign: str):
         res: Optional[int] = None
@@ -88,6 +97,10 @@ class Handler:
         return res
 
     def _get_nakshatra(self, longitude: float):
-        nakshatra_index = int(longitude // 13.3333)
-        pada_index = int((longitude % 13.3333) // 3.3333)
-        return self.nakshatras[nakshatra_index], pada_index + 1
+        nakshatra_diaposone = 13.3333333333333
+        nakshatra_index = int(longitude // nakshatra_diaposone)
+        pada_index = int((longitude % nakshatra_diaposone) // 3.3333333333333)
+        if nakshatra_index < 0 or nakshatra_index >= len(self.nakshatras):
+            raise ValueError(
+                f"Долгота выходит за пределы допустимого диапазона для накшатры. {nakshatra_index}, {longitude}")
+        return self.nakshatras[nakshatra_index], pada_index + 1, nakshatra_index

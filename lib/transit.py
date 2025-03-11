@@ -11,6 +11,8 @@ class TransitParams(GlobalParams):
     sign: str
     sign_index: int
     all: bool
+    nakshatra: str
+    nakshatra_index: int
 
 
 @dataclass
@@ -20,13 +22,15 @@ class Transits:
 
 
 class Transit(Astro):
-    def __get(self, params: TransitParams, _sign_index: Optional[int] = None):
+    def __get(self, params: TransitParams, _sign_index: Optional[int] = None, _nakshatra_index: Optional[int] = None):
         sign_index = _sign_index if _sign_index != None else params.sign_index
+        nakshatra_index = _nakshatra_index if _nakshatra_index != None else params.nakshatra_index
         current_time = params.start
 
         result: List[Transits] = []
 
         current_sign = ''
+        current_nakshatra = ''
 
         while current_time < params.end:
             jd = self._get_jd(current_time=current_time)
@@ -35,16 +39,27 @@ class Transit(Astro):
                 planet=params.planet, jd=jd, ayanamsa=ayanamsa)
 
             sign = self._get_zodiac_sign(planet_longitude)
-
-            if sign_index != sign.sign_index:
-                current_sign = ''
-            elif sign_index == sign.sign_index and current_sign != sign.name_en and sign.degrees == 0:
-                current_sign = sign.name_en
-                local_time = self._convert_to_local_time(
-                    current_time, self.timezone_str)
-                transit = Moment(
-                    time=local_time, longitude=planet_longitude)
-                result.append(Transits(moment=transit, sign=sign))
+            if nakshatra_index == -1:
+                if sign_index != sign.sign_index:
+                    current_sign = ''
+                elif sign_index == sign.sign_index and current_sign != sign.name_en and sign.degrees == 0:
+                    current_sign = sign.name_en
+                    local_time = self._convert_to_local_time(
+                        current_time, self.timezone_str)
+                    transit = Moment(
+                        time=local_time, longitude=planet_longitude)
+                    result.append(Transits(moment=transit, sign=sign))
+            else:
+                _n, _, _ni = self._get_nakshatra(planet_longitude)
+                if nakshatra_index != _ni:
+                    current_nakshatra = ''
+                elif nakshatra_index == _ni and current_nakshatra != _n:
+                    current_nakshatra = _n
+                    local_time = self._convert_to_local_time(
+                        current_time, self.timezone_str)
+                    transit = Moment(
+                        time=local_time, longitude=planet_longitude)
+                    result.append(Transits(moment=transit, sign=sign))
 
             current_time += params.step
 
@@ -55,8 +70,12 @@ class Transit(Astro):
         self._set_global_params()
         results: List[List[Transits]] = []
         if (params.all):
-            for index, _ in enumerate(self.zodiac_signs_en):
-                results.append(self.__get(params, index))
+            if params.nakshatra_index != -1:
+                for index, _ in enumerate(self.zodiac_signs_en):
+                    results.append(self.__get(params, index))
+            else:
+                for index, _ in enumerate(self.nakshatras):
+                    results.append(self.__get(params, 0, index))
         else:
             results.append(self.__get(params))
 
@@ -78,6 +97,15 @@ class Transit(Astro):
                 f"Sign is missing: {params.sign}, alloved signs_en:{'|'.join(self.zodiac_signs_en)} \n or signs_ru:{'|'.join(self.zodiac_signs_ru)}")
             exit(1)
 
+        nakshatra_index = -1
+        if (params.nakshatra != self.NAKHATRA_DEFAULT):
+            _nakshatra_index = self.find_nakshatra_index(params.nakshatra)
+            if (_nakshatra_index == None):
+                print(
+                    f"Nakshatra is missing: {params.nakshatra}, alloved nakshatras:{'|'.join(self.nakshatras)}")
+                exit(1)
+            nakshatra_index = _nakshatra_index
+
         if params.multiThread:
             chunks = self.split_dates(
                 start=params.start, end=params.end, step=params.step)
@@ -95,7 +123,9 @@ class Transit(Astro):
                             multiThread=params.multiThread,
                             maxThreads=params.maxThreads,
                             sign_index=sign_index,
-                            all=params.all
+                            all=params.all,
+                            nakshatra=params.nakshatra,
+                            nakshatra_index=nakshatra_index
                         ) for chunk in chunks
                     ]
                 ))
@@ -113,6 +143,8 @@ class Transit(Astro):
                 maxThreads=params.maxThreads,
                 sign_index=sign_index,
                 all=params.all,
+                nakshatra=params.nakshatra,
+                nakshatra_index=nakshatra_index
             ))
 
         print(
