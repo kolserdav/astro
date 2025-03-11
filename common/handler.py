@@ -37,6 +37,15 @@ class Handler:
         "Sagittarius", "Capricorn", "Aquarius", "Pisces"
     ]
 
+    nakshatras = [
+        "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashirsha",
+        "Ardra", "Punarvasu", "Pushya", "Ashlesha", "Magha",
+        "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra",
+        "Swati", "Vishakha", "Anuradha", "Jyeshtha", "Mula",
+        "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta",
+        "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
+    ]
+
     planet = Planet()
 
     SIGN_DEFAULT = 'Овен'
@@ -77,3 +86,8 @@ class Handler:
             except ValueError:
                 pass
         return res
+
+    def _get_nakshatra(self, longitude: float):
+        nakshatra_index = int(longitude // 13.3333)
+        pada_index = int((longitude % 13.3333) // 3.3333)
+        return self.nakshatras[nakshatra_index], pada_index + 1

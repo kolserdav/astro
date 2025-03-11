@@ -122,6 +122,6 @@ class Retro(Astro):
 for: {params.step}")
             for item in items:
                 print(
-                    f"Time: {item.moment.time}, Retro is: {not item.out} Sign: {self._show_sign(item.sign)}, {params.planet}: {self._show_degres(item.sign)}")
+                    f"Time: {item.moment.time}, Retro is: {not item.out} Sign: {self._show_sign(sign=item.sign, longitude=item.moment.longitude)}, {params.planet}: {self._show_degres(item.sign)}")
         else:
             print(f"There are no matches for these params: {params}")

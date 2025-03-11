@@ -104,7 +104,7 @@ for: {params.step}, with accuracy: {params.accuracy}:")
                 time = item.planet1.time.strftime(self.TIME_FORMAT)
                 data1: Sign = self._get_zodiac_sign(item.planet1.longitude)
                 data2: Sign = self._get_zodiac_sign(item.planet2.longitude)
-                print(f"Time: {time}, Sign: {self._show_sign(data1)}, {params.planet1}: {data1.degrees}\
+                print(f"Time: {time}, Sign: {self._show_sign(sign=data1, longitude=item.planet1.longitude)}, {params.planet1}: {data1.degrees}\
 :{data1.minutes}:{data1.seconds}, {params.planet2}: {data2.degrees}:{data2.minutes}:{data2.seconds}")
         else:
             print(f"There are no matches for these params: {params}")
